@@ -1,0 +1,24 @@
+{
+  "key": "YOUR_GOOGLE_API_KEY",
+  "url": "https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&eventType=live",
+  "duration_in_sec": 20,
+  "request_rate_in_sec": 3,
+  "channels": [
+    {
+      "name": "LoL Esports",
+      "channel": "UCvqRdlKsE5Q8mf8YXbdIJLw"
+    },
+    {
+      "name": "liasN97",
+      "channel": "UCW6SLCuRXuUFWbQH563D0Hw"
+    },
+    {
+      "name": "Capcom Fighters",
+      "channel": "UCPGuorlvarThSlwJpyTHOmQ"
+    },
+    {
+      "name": "Rocket Beans TV",
+      "channel": "UCQvTDmHza8erxZqDkjQ4bQQ"
+    }
+  ]
+}
