@@ -43,7 +43,7 @@ public class Program {
 
     private static void readConfigs() throws IOException {
         String dir = System.getProperty("user.dir");
-        String configFile = readFile(dir + "/YoutubeLiveStreamChecker/config/config.json", StandardCharsets.UTF_8);
+        String configFile = readFile(dir + "/config/config.json", StandardCharsets.UTF_8);
         JSONObject config = new JSONObject(configFile);
         key = config.getString("key");
         url = config.getString("url");
