@@ -32,7 +32,7 @@ public class Program {
         // schedule a task for each channel
         channels.forEach((id, name) -> {
             final LiveStreamChecker checkLifeStream = new LiveStreamChecker();
-            checkLifeStream.init(url, name, id, key);
+            checkLifeStream.init(url, name, id, key, state -> System.out.println(state));
             scheduler.scheduleAtFixedRate(checkLifeStream, 0, rate, TimeUnit.SECONDS);
         });
 
@@ -68,10 +68,12 @@ public class Program {
         private String channelId;
         private String channelUrl;
         private HttpURLConnection connection;
+        private IDelegate delegate;
 
-        public void init(String url, String channelName, String channelId, String publicKey) {
+        public void init(String url, String channelName, String channelId, String publicKey, IDelegate delegate) {
             this.channelName = channelName;
             this.channelId = channelId;
+            this.delegate = delegate;
             this.channelUrl = String.format("%s&channelId=%s&key=%s", url, channelId, publicKey);
         }
 
@@ -104,7 +106,8 @@ public class Program {
                     }
                     reader.close();
                     String state = getState(result.toString());
-                    System.out.println(String.format("CHANNEL: %s NAME: %s STATE: %s", channelId, channelName, state));
+//                    System.out.println(String.format("CHANNEL: %s NAME: %s STATE: %s", channelId, channelName, state));
+                    delegate.Execute(state);
                 }
             } catch (MalformedURLException e) {
                 e.printStackTrace();
@@ -127,5 +130,9 @@ public class Program {
             JSONObject error = obj.getJSONObject("error");
             return error.getString("message");
         }
+    }
+
+    public interface IDelegate {
+        public void Execute(String state);
     }
 }
