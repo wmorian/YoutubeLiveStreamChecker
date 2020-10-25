@@ -44,7 +44,6 @@ public class Program {
 
     private static void readConfigs() throws IOException {
         String dir = System.getProperty("user.dir");
-        String temp = FileSystems.getDefault().getPath(".").toAbsolutePath().toString();
         String configFile = readFile(dir + "/config/config.json", StandardCharsets.UTF_8);
         JSONObject config = new JSONObject(configFile);
         key = config.getString("key");
