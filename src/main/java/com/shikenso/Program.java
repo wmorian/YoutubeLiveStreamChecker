@@ -3,11 +3,6 @@ package com.shikenso;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.charset.Charset;
@@ -20,7 +15,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Program {
     private static String key;
-    private static String url;
+    private static String baseUrl;
     private static int rate;
     private static int duration;
     private static Hashtable<String, String> channels = new Hashtable<>();
@@ -31,9 +26,15 @@ public class Program {
 
         // schedule a task for each channel
         channels.forEach((id, name) -> {
-            final LiveStreamChecker checkLifeStream = new LiveStreamChecker();
-            checkLifeStream.init(url, name, id, key, state -> System.out.println(state));
-            scheduler.scheduleAtFixedRate(checkLifeStream, 0, rate, TimeUnit.SECONDS);
+            final LivestreamStateChecker livestreamStateChecker = new LivestreamStateChecker();
+            Runnable runnable = () -> {
+                String channelUrl = String.format("%s&channelId=%s&key=%s", baseUrl, id, key);
+                livestreamStateChecker.requestState(channelUrl, state -> {
+                    System.out.println(String.format("CHANNEL: %s NAME: %s STATE: %s", id, name, state));
+                });
+            };
+
+            scheduler.scheduleAtFixedRate(runnable, 0, rate, TimeUnit.SECONDS);
         });
 
         scheduler.awaitTermination(duration, TimeUnit.SECONDS);
@@ -43,10 +44,11 @@ public class Program {
 
     private static void readConfigs() throws IOException {
         String dir = System.getProperty("user.dir");
-        String configFile = readFile(dir + "/YoutubeLiveStreamChecker/config/config.json", StandardCharsets.UTF_8);
+        String temp = FileSystems.getDefault().getPath(".").toAbsolutePath().toString();
+        String configFile = readFile(dir + "/config/config.json", StandardCharsets.UTF_8);
         JSONObject config = new JSONObject(configFile);
         key = config.getString("key");
-        url = config.getString("url");
+        baseUrl = config.getString("url");
         rate = config.getInt("request_rate_in_sec");
         duration = config.getInt("duration_in_sec");
 
@@ -57,82 +59,8 @@ public class Program {
         }
     }
 
-    public static String readFile(String path, Charset encoding) throws IOException
-    {
+    public static String readFile(String path, Charset encoding) throws IOException {
         byte[] bytes = Files.readAllBytes(Paths.get(path));
         return new String(bytes, encoding);
-    }
-
-    static class LiveStreamChecker implements Runnable {
-        private String channelName;
-        private String channelId;
-        private String channelUrl;
-        private HttpURLConnection connection;
-        private IDelegate delegate;
-
-        public void init(String url, String channelName, String channelId, String publicKey, IDelegate delegate) {
-            this.channelName = channelName;
-            this.channelId = channelId;
-            this.delegate = delegate;
-            this.channelUrl = String.format("%s&channelId=%s&key=%s", url, channelId, publicKey);
-        }
-
-        @Override
-        public void run() {
-            StringBuilder result = new StringBuilder();
-            BufferedReader reader;
-            try {
-                URL url = new URL(channelUrl);
-                connection = (HttpURLConnection) url.openConnection();
-
-                // setup request
-                connection.setRequestMethod("GET");
-                connection.setConnectTimeout(5000);
-                connection.setReadTimeout(5000);
-
-                String line;
-                if (connection.getResponseCode() > 299) {
-                    reader = new BufferedReader(new InputStreamReader(connection.getErrorStream()));
-                    while ((line = reader.readLine()) != null) {
-                        result.append(line);
-                    }
-                    reader.close();
-                    String errorMessage = getErrorMessage(result.toString());
-                    System.out.println(String.format("CHANNEL: %s ERROR: %s", channelId, errorMessage));
-                } else {
-                    reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                    while ((line = reader.readLine()) != null) {
-                        result.append(line);
-                    }
-                    reader.close();
-                    String state = getState(result.toString());
-//                    System.out.println(String.format("CHANNEL: %s NAME: %s STATE: %s", channelId, channelName, state));
-                    delegate.Execute(state);
-                }
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                connection.disconnect();
-            }
-        }
-
-        private static String getState(String json) {
-            JSONObject obj = new JSONObject(json);
-            JSONObject pageInfo = obj.getJSONObject("pageInfo");
-            int totalResult = pageInfo.getInt("totalResults");
-            return totalResult == 0 ? "not live" : "live";
-        }
-
-        private static String getErrorMessage(String json) {
-            JSONObject obj = new JSONObject(json);
-            JSONObject error = obj.getJSONObject("error");
-            return error.getString("message");
-        }
-    }
-
-    public interface IDelegate {
-        public void Execute(String state);
     }
 }
